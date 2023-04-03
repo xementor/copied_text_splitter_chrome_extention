@@ -130,7 +130,7 @@ class IndexDB {
       let countRequest = store.count();
 
       countRequest.onsuccess = () => {
-        let lastKeyI = countRequest.result - 1;
+        let lastKeyI = countRequest.result;
         resolve(lastKeyI)
       };
 
@@ -183,8 +183,8 @@ function getPrevClip() {
   return indexDB.open()
     .then(() => {
       return indexDB.lastKey().then((index) => {
-        console.log('prev', index)
         return indexDB.getById(index).then((data) => {
+          if (data == undefined) return "false"
           return data
         })
       })
