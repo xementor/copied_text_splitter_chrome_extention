@@ -267,7 +267,9 @@ function splitText(text, count=200) {
   const chunks = [];
   for (let i = 0; i < words.length; i += count) {
     const chunk = words.slice(i, i + count).join(' ');
-    const title = chunk.split(' ').slice(0, 6).join(' ');
+
+    const last = chunk.split(' ').slice(-3).join(' ')
+    const title = chunk.split(' ').slice(0, 4).join(' ') + "..." + last;
     chunks.push({ title, chunk });
   }
   return chunks
@@ -278,7 +280,7 @@ function addTotable(chunks) {
 
   chunks.forEach((chunk, index) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${index}</td> <td>${chunk.title}...</td><td><button> Copy </button></td>`;
+    tr.innerHTML = `<td>${index}</td> <td>${chunk.title}</td><td><button> Copy </button></td>`;
     table.appendChild(tr);
   });
 }

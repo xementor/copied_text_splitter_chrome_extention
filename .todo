@@ -1,3 +1,4 @@
-- [ ] clipboard to chrome storage
+- [x] clipboard to chrome storage
 - [x] now represent all the chunks
-- [ ] on copy this chunk to clipboard
+- [x] on copy this chunk to clipboard
+- [x] indexedDb API to store data
