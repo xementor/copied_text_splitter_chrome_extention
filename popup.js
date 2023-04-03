@@ -147,25 +147,30 @@ class IndexDB {
 
 
 
+const indexDB = new IndexDB('clipboard-database', 'clips');
+const wordCount = 1000
+let fullData;
+
 document.addEventListener('DOMContentLoaded', async function () {
   const copiedText = getContentFromClipboard()
-  if (hasMoreThan200Words(copiedText)) {
-    await addClip(copiedText)
+  if (hasMoreThanWords(copiedText, wordCount)){
+    await addClip(copiedText, wordCount)
   };
-  const fullData = await getPrevClip()
-  if (fullData == "false") {
+  resData = await getPrevClip()
+  if (resData == "false") {
     return;
   }
+
+  fullData = resData
   addTotable(fullData)
 });
 
 
 
-const indexDB = new IndexDB('clipboard-database', 'clips');
 
 
-function addClip(text) {
-  const chunks = splitText(text)
+function addClip(text, count) {
+  const chunks = splitText(text,count)
   indexDB.open()
     .then(() =>
       indexDB.add(chunks).then(id => console.log(`${id} added to the database`))
@@ -197,6 +202,7 @@ function getPrevClip() {
 
 
 document.addEventListener('click', async function () {
+  if (fullData === undefined) return;
   // Get a reference to the table element
   var table = document.getElementById('table');
 
@@ -205,7 +211,7 @@ document.addEventListener('click', async function () {
 
   // Loop through the buttons and attach a click event listener to each one
   for (var i = 0; i < buttons.length; i++) {
-    buttons[i].addEventListener('click', function (event) {
+    buttons[i].addEventListener('click', async function (event) {
       // Get a reference to the button that was clicked
       var button = event.target;
 
@@ -216,17 +222,19 @@ document.addEventListener('click', async function () {
       var cells = row.getElementsByTagName('td');
       var id = cells[0].textContent;
       const text = fullData[id].chunk
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          // Code to execute if the copy command was successful
-        })
-        .catch((error) => {
-          // Code to execute if the copy command was not successful
+      try {
+          await navigator.clipboard.writeText(text)
+        }
+        catch( error ) {
           console.error("Failed to copy text: ", error);
-        })
-    });
-  }
+        }
+    }
+  )}
 })
+  
+
+
+
 
 async function getPreviosData() {
   let res = "false";
@@ -249,17 +257,17 @@ async function getPreviosData() {
 
 
 
-function hasMoreThan200Words(str) {
+function hasMoreThanWords(str,count=200) {
   const words = str.match(/\b\w+\b/g);
-  return words && words.length > 200;
+  return words && words.length > (count + 100);
 }
 
-function splitText(text) {
+function splitText(text, count=200) {
   const words = text.split(' ');
   const chunks = [];
-  for (let i = 0; i < words.length; i += 200) {
-    const chunk = words.slice(i, i + 200).join(' ');
-    const title = chunk.split(' ').slice(0, 10).join(' ');
+  for (let i = 0; i < words.length; i += count) {
+    const chunk = words.slice(i, i + count).join(' ');
+    const title = chunk.split(' ').slice(0, 6).join(' ');
     chunks.push({ title, chunk });
   }
   return chunks
@@ -306,3 +314,4 @@ function getContentFromClipboard() {
 
   return result;
 }
+
