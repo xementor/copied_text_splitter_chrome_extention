@@ -1,31 +1,3 @@
-let fullData;
-const indexDB = new IndexDB('clipboard-database', 'clips');
-
-document.addEventListener('DOMContentLoaded', async function() {
-  const copiedText = getContentFromClipboard()
-  if (!hasMoreThan200Words(copiedText)) {
-    fullData = await getPreviosData()
-    if (fullData == "false") {
-      return;
-    }
-    addTotable(fullData)
-    return
-  };
-
-  const main_title = copiedText.split(' ').slice(0, 10).join(' ');
-
-  chrome.storage.sync.get([main_title], (result) => {
-    if (Object.keys(result).length === 0) {
-      addTextToStorage(copiedText, main_title)
-    }
-    else {
-      fullData = result[main_title]
-      addTotable(fullData)
-    }
-  });
-
-});
-
 class IndexDB {
   constructor(dbName, storeName) {
     this.dbName = dbName;
@@ -150,44 +122,81 @@ class IndexDB {
     });
   }
 
+  lastKey() {
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction([this.storeName], 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+
+      let countRequest = store.count();
+
+      countRequest.onsuccess = () => {
+        let lastKeyI = countRequest.result - 1;
+        resolve(lastKeyI)
+      };
+
+      countRequest.onerror = function (event) {
+        reject(Error('Failed to delete item.'));
+      };
+    });
+  }
+
   close() {
     this.db.close();
   }
 }
 
-// Example usage:
+
+
+document.addEventListener('DOMContentLoaded', async function () {
+  const copiedText = getContentFromClipboard()
+  if (hasMoreThan200Words(copiedText)) {
+    await addClip(copiedText)
+  };
+  const fullData = await getPrevClip()
+  if (fullData == "false") {
+    return;
+  }
+  addTotable(fullData)
+});
 
 
 
-indexDB.open()
-  .then(() => {
-    // Add an item
-    indexDB.add({ name: 'John', email: 'john@example.com' })
-      .then(id => console.log(`Added item with ID ${id}.`));
-
-    // Get all
-    indexDB.getAll()
-      .then(items => console.log('All items:', items));
-
-    // Update an item
-    // indexDB.getById(1)
-    //   .then(item => {
-    //     item.email = 'jane@example.com';
-    //     indexDB.update(item)
-    //       .then(() => console.log(`Updated item with ID ${item.id}.`));
-    //   });
-
-    // Delete an item
-    indexDB.delete(1)
-      .then(() => console.log('Deleted item with ID 1.'));
-
-    // Close the database connection
-    indexDB.close();
-  })
-  .catch(error => console.error(error));
+const indexDB = new IndexDB('clipboard-database', 'clips');
 
 
-document.addEventListener('click', async function(){
+function addClip(text) {
+  const chunks = splitText(text)
+  indexDB.open()
+    .then(() =>
+      indexDB.add(chunks).then(id => console.log(`${id} added to the database`))
+    )
+    .catch(error => console.error(error));
+}
+
+async function addTextToStorage(text, main_title) {
+  // text more than 200 word
+  const chunks = splitText(text)
+  await chrome.storage.sync.set({ [main_title]: chunks, prev: main_title });
+}
+
+function getPrevClip() {
+  return indexDB.open()
+    .then(() => {
+      return indexDB.lastKey().then((index) => {
+        console.log('prev', index)
+        return indexDB.getById(index).then((data) => {
+          return data
+        })
+      })
+    })
+    .catch(error => {
+      console.log('get error',error)
+      return "false"
+    });
+}
+
+
+document.addEventListener('click', async function () {
   // Get a reference to the table element
   var table = document.getElementById('table');
 
@@ -219,12 +228,12 @@ document.addEventListener('click', async function(){
   }
 })
 
-async function getPreviosData(){
+async function getPreviosData() {
   let res = "false";
   const result = await chrome.storage.sync.get(['prev']);
 
   if (Object.keys(result).length === 0) {
-    console.log('nov prev data'); 
+    console.log('nov prev data');
   }
   else {
     prevKey = result['prev']
@@ -238,11 +247,7 @@ async function getPreviosData(){
 
 
 
-async function addTextToStorage(text, main_title) {
-  // text more than 200 word
-  const chunks = splitText(text)
-  await chrome.storage.sync.set({[main_title]: chunks, prev: main_title});
-}
+
 
 function hasMoreThan200Words(str) {
   const words = str.match(/\b\w+\b/g);
@@ -255,14 +260,14 @@ function splitText(text) {
   for (let i = 0; i < words.length; i += 200) {
     const chunk = words.slice(i, i + 200).join(' ');
     const title = chunk.split(' ').slice(0, 10).join(' ');
-    chunks.push({title, chunk});
+    chunks.push({ title, chunk });
   }
   return chunks
 }
 
 function addTotable(chunks) {
   const table = document.getElementById('table');
-  
+
   chunks.forEach((chunk, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${index}</td> <td>${chunk.title}...</td><td><button> Copy </button></td>`;
@@ -284,20 +289,20 @@ function selectChunk(event) {
 
 function copyToClipboard() {
   const chunk = document.getElementById('copy-button').getAttribute('data-clipboard-text');
-  console.log('onlclick chunk',chunk)
+  console.log('onlclick chunk', chunk)
   navigator.clipboard.writeText(chunk);
 }
 
 function getContentFromClipboard() {
-    var result = '';
-    var sandbox = document.getElementById('sandbox');
-    sandbox.value = '';
-    sandbox.select();
-    if (document.execCommand('paste')) {
-        result = sandbox.value;
-    }
-    sandbox.value = '';
-    sandbox.style.display = 'none';
+  var result = '';
+  var sandbox = document.getElementById('sandbox');
+  sandbox.value = '';
+  sandbox.select();
+  if (document.execCommand('paste')) {
+    result = sandbox.value;
+  }
+  sandbox.value = '';
+  sandbox.style.display = 'none';
 
-    return result;
+  return result;
 }
