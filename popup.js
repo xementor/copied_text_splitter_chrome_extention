@@ -148,7 +148,7 @@ class IndexDB {
 
 
 const indexDB = new IndexDB('clipboard-database', 'clips');
-const wordCount = 1000
+const wordCount = 2000;
 let fullData;
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -259,7 +259,7 @@ async function getPreviosData() {
 
 function hasMoreThanWords(str,count=200) {
   const words = str.match(/\b\w+\b/g);
-  return words && words.length > (count + 100);
+  return words && words.length > (count + 600);
 }
 
 function splitText(text, count=200) {
